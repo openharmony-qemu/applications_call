@@ -43,7 +43,16 @@ export default class UIExtAbility extends UIExtensionAbility {
   onSessionCreate(want: Want, session: UIExtensionContentSession) {
     this.fetchSystemFontSizeScale();
     let storage: LocalStorage = new LocalStorage();
-    let appUid: number = want.parameters?.appUid as number;
+    // AMS overwrites this target-specific value using the validated direct caller token.
+    // appUid remains a request, never an authority to edit another application.
+    const callerUid = want.parameters?.['ohos.net.policy.callerUid'] as number;
+    const appUid = want.parameters?.appUid as number;
+    if ((want.deviceId !== undefined && want.deviceId.length > 0) ||
+      !Number.isInteger(callerUid) || callerUid < 0 || !Number.isInteger(appUid) || appUid !== callerUid) {
+      LogUtil.error(TAG, 'Network policy caller identity mismatch');
+      session.terminateSelf();
+      return;
+    }
     storage.setOrCreate('session', session);
     storage.setOrCreate('appUid', appUid);
     session.loadContent('pages/NetAccessPolicyDiagPage', storage);

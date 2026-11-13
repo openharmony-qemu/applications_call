@@ -222,14 +222,14 @@ export class DetailsCommon {
   }
 
   async deleteData() {
+    await this.dataStorage.dataDelete(this.profileID);
     let icc = await sim.getSimIccId(this.cardType);
     await this.sharedPreferences.getFromPreferences('selectAPN_common_' + icc, -1)
-      .then((data: preferences.ValueType) => {
+      .then(async (data: preferences.ValueType) => {
         if (data === this.profileID) {
-          this.sharedPreferences.saveToPreferences('selectAPN_common_' + icc, -1);
+          await this.sharedPreferences.saveToPreferences('selectAPN_common_' + icc, -1);
         }
       });
-    await this.dataStorage.dataDelete(this.profileID);
   }
 
   private numberToArray(bearerBitmask: number): number[] {

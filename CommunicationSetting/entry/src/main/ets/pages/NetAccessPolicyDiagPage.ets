@@ -41,6 +41,7 @@ struct CustomDialogExample {
   @StorageProp('fontSizeScale') fontSizeScale: number = 0;
   controller: CustomDialogController
   storage = LocalStorage.getShared();
+  private committing: boolean = false;
 
   @Builder
   wifiOnlyPart() {
@@ -82,7 +83,7 @@ struct CustomDialogExample {
             left: { anchor: '__container__', align: HorizontalAlign.Start },
             right: { anchor: 'dividerCenter', align: HorizontalAlign.Start }
           })
-          .id('notAllow')
+          .id('net-policy-deny')
 
         Button($r('app.string.allow'))
           .onClick(() => {
@@ -94,7 +95,7 @@ struct CustomDialogExample {
             left: { anchor: 'dividerCenter', align: HorizontalAlign.End },
             right: { anchor: '__container__', align: HorizontalAlign.End }
           })
-          .id('allow')
+          .id('net-policy-allow')
       }
       .width('100%')
     }
@@ -106,6 +107,7 @@ struct CustomDialogExample {
   wifiOnlySeniorButtonPart() {
     Column() {
       Button($r('app.string.not_allow'))
+        .id('net-policy-deny')
         .onClick(() => {
           this.wifiOnlyNotAllowAction();
         })
@@ -116,6 +118,7 @@ struct CustomDialogExample {
           '32vp')
 
       Button($r('app.string.allow'))
+        .id('net-policy-allow')
         .onClick(() => {
           this.wifiOnlyAllowAction();
         })
@@ -131,61 +134,30 @@ struct CustomDialogExample {
   normalButtonPart() {
     Column() {
       Button($r('app.string.mobile_data_and_WLAN'))
-        .onClick(() => {
-          let accessPolicy: policy.NetworkAccessPolicy = {
-            allowWiFi: true,
-            allowCellular: true,
-          }
-          LogUtil.info(TAG,`set wifi-mobile wifi: ${accessPolicy.allowWiFi}, cellular: ${accessPolicy.allowCellular}`);
-          policy.setNetworkAccessPolicy(this.appUid, accessPolicy, true)
-          DotUtil.getInstance().reportAllowWirelessDataDialog(PolicyDialogUsersOperation.MOBILE_DATA_AND_WLAN);
-          this.controller.close()
-          this.cancel()
-        })
+        .id('net-policy-wifi-cellular')
+        .onClick(() => this.commitPolicy(true, true, PolicyDialogUsersOperation.MOBILE_DATA_AND_WLAN))
         .fontSize($r('app.float.dialog_menu_font_size'))
         .fontWeight(FontWeight.Medium)
         .backgroundColor($r('sys.color.ohos_id_color_dialog_bg'))
         .fontColor($r('sys.color.ohos_id_color_text_primary_activated'))
         .margin({ bottom: 4 })
-
       Button($r('app.string.only_wlan'))
-        .onClick(() => {
-          let accessPolicy: policy.NetworkAccessPolicy = {
-            allowWiFi: true,
-            allowCellular: false,
-          }
-          LogUtil.info(TAG,`set only-wlan wifi: ${accessPolicy.allowWiFi}, cellular: ${accessPolicy.allowCellular}`);
-          policy.setNetworkAccessPolicy(this.appUid, accessPolicy, true)
-          DotUtil.getInstance().reportAllowWirelessDataDialog(PolicyDialogUsersOperation.WLAN_ONLY);
-          this.controller.close()
-          this.cancel()
-        })
+        .id('net-policy-wifi-only')
+        .onClick(() => this.commitPolicy(true, false, PolicyDialogUsersOperation.WLAN_ONLY))
         .fontSize($r('app.float.dialog_menu_font_size'))
         .fontWeight(FontWeight.Medium)
-        .fontColor($r('sys.color.ohos_id_color_text_primary_activated'))
         .backgroundColor($r('sys.color.ohos_id_color_dialog_bg'))
+        .fontColor($r('sys.color.ohos_id_color_text_primary_activated'))
         .margin({ bottom: 4 })
-
       Button($r('app.string.not_allow'))
-        .onClick(() => {
-          let accessPolicy: policy.NetworkAccessPolicy = {
-            allowWiFi: false,
-            allowCellular: false,
-          }
-          LogUtil.info(TAG,`set deny wifi: ${accessPolicy.allowWiFi}, cellular: ${accessPolicy.allowCellular}`);
-          policy.setNetworkAccessPolicy(this.appUid, accessPolicy, true)
-          DotUtil.getInstance().reportAllowWirelessDataDialog(PolicyDialogUsersOperation.DENY);
-          this.controller.close()
-          this.cancel()
-        })
+        .id('net-policy-deny')
+        .onClick(() => this.commitPolicy(false, false, PolicyDialogUsersOperation.DENY))
         .fontSize($r('app.float.dialog_menu_font_size'))
         .fontWeight(FontWeight.Medium)
-        .fontColor($r('sys.color.ohos_id_color_text_primary_activated'))
         .backgroundColor($r('sys.color.ohos_id_color_dialog_bg'))
+        .fontColor($r('sys.color.ohos_id_color_text_primary_activated'))
         .margin({ bottom: 8 })
-    }
-    .margin({ top: 8, bottom: 8 })
-    .justifyContent(FlexAlign.Center)
+    }.margin({ top: 8, bottom: 8 }).justifyContent(FlexAlign.Center)
   }
 
   @Builder
@@ -213,6 +185,7 @@ struct CustomDialogExample {
       Column() {
         this.ImagePart()
         Text(this.appValue)
+          .id('net-policy-dialog-title')
           .fontFamily('HarmonyHeiTi')
           .fontSize($r('sys.float.ohos_id_text_size_headline8'))
           .fontWeight(FontWeight.Bold)
@@ -260,28 +233,31 @@ struct CustomDialogExample {
   confirm() {
   }
 
-  wifiOnlyAllowAction() {
-    let accessPolicy: policy.NetworkAccessPolicy = {
-      allowWiFi: true,
-      allowCellular: true
+  private async commitPolicy(allowWiFi: boolean, allowCellular: boolean,
+    operation: PolicyDialogUsersOperation): Promise<void> {
+    if (this.committing) {
+      return;
     }
-    LogUtil.info(TAG,`set wifi-only allow wifi: ${accessPolicy.allowWiFi}, cellular: ${accessPolicy.allowCellular}`);
-    policy.setNetworkAccessPolicy(this.appUid, accessPolicy, true)
-    DotUtil.getInstance().reportAllowWirelessDataDialog(PolicyDialogUsersOperation.WLAN_ONLY);
-    this.controller.close()
-    this.cancel()
+    this.committing = true;
+    try {
+      await policy.setNetworkAccessPolicy(this.appUid, { allowWiFi, allowCellular }, true);
+      LogUtil.info(TAG, `Network policy committed uid:${this.appUid} wifi:${allowWiFi} cellular:${allowCellular}`);
+      DotUtil.getInstance().reportAllowWirelessDataDialog(operation);
+      this.controller.close();
+      this.cancel();
+    } catch (error) {
+      LogUtil.error(TAG, `Network policy commit failed uid:${this.appUid} error:${JSON.stringify(error)}`);
+    } finally {
+      this.committing = false;
+    }
+  }
+
+  wifiOnlyAllowAction() {
+    this.commitPolicy(true, true, PolicyDialogUsersOperation.WLAN_ONLY);
   }
 
   wifiOnlyNotAllowAction() {
-    let accessPolicy: policy.NetworkAccessPolicy = {
-      allowWiFi: false,
-      allowCellular: false,
-    }
-    LogUtil.info(TAG,`set wifi-only notallow wifi: ${accessPolicy.allowWiFi}, cellular: ${accessPolicy.allowCellular}`);
-    policy.setNetworkAccessPolicy(this.appUid, accessPolicy, true)
-    DotUtil.getInstance().reportAllowWirelessDataDialog(PolicyDialogUsersOperation.DENY);
-    this.controller.close()
-    this.cancel()
+    this.commitPolicy(false, false, PolicyDialogUsersOperation.DENY);
   }
 }
 

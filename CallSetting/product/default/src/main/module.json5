@@ -93,6 +93,13 @@
     ],
     "extensionAbilities": [
       {
+        "name": "GeneralCallSettingDialogAbility",
+        "srcEntry": "./ets/CallSettingDialogAbility/GeneralCallSettingDialogAbility.ets",
+        "description": "System APN settings",
+        "exported": true,
+        "type": "sys/commonUI"
+      },
+      {
         "name": "com.ohos.callsetting.MainAbility",
         "srcEntry": "./ets/MainAbility/MainAbility.ets",
         "description": "$string:extesionability_description",

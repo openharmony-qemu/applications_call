@@ -96,40 +96,26 @@ export class DataStorage {
       .and()
       .equalTo('proxy_ip_address', common.proxy.description + ':' + common.port.description);
     let columns = ['*'];
-    await dataShareHelper.query(this.addUriParam(this.uri, 'simId', simId), da, columns).then(async (queryData) => {
-      LogUtils.i(TAG, 'dataInsert query succeed, rowCount : ' + queryData.rowCount);
-      if (queryData.rowCount > 0) {
-        queryData.goToFirstRow();
-        let profileID = queryData.getLong(DataShareEnum.profile_id);
-        common.profileID = profileID;
-        LogUtils.i(TAG, '[dataInsert dataUpdate]' + JSON.stringify(profileID));
+    const existing = await dataShareHelper.query(this.addUriParam(this.uri, 'simId', simId), da, columns);
+    try {
+      if (existing.rowCount > 0 && existing.goToFirstRow()) {
+        const profileID = existing.getLong(DataShareEnum.profile_id);
         await this.dataUpdate(profileID, common);
       } else {
-        let data: ValuesBucket = {};
-        data = await this.initSaveData(common);
-        LogUtils.i(TAG, '[dataInsert insert]');
-        data = this.checkApnData(data);
-        await dataShareHelper.insert(this.uri, data).then(insertData => {
-          LogUtils.i(TAG, 'insert succeed, data : ' + insertData);
-        }).catch((err: BusinessError) => {
-          LogUtils.e(TAG, `insert error: code: ${err.code}, message: ${err.message} `);
-        })
+        const values = this.checkApnData(await this.initSaveData(common));
+        const inserted = await dataShareHelper.insert(this.uri, values);
+        if (inserted < 0) { throw new Error('Actual APN insert failed: ' + inserted); }
+        LogUtils.i(TAG, 'Actual APN insert returned:' + inserted);
       }
-      queryData.close();
-    }).catch((err: BusinessError) => {
-      LogUtils.e(TAG, `query error: code: ${err.code}, message: ${err.message} `);
-    })
+    } finally { existing.close(); }
   }
 
-  public async dataDelete(profileID: number) {
-    let da = new dataSharePredicates.DataSharePredicates();
-    da.equalTo('profile_id', Number(profileID));
-    LogUtils.i(TAG, '[dataDelete]' + JSON.stringify(profileID));
-    await dataShareHelper.delete(this.uri, da).then(data => {
-      LogUtils.i(TAG, 'delete succeed, data : ' + data);
-    }).catch((err: BusinessError) => {
-      LogUtils.e(TAG, `insert error: code: ${err.code}, message: ${err.message} `);
-    })
+  public async dataDelete(profileID: number): Promise<void> {
+    const predicate = new dataSharePredicates.DataSharePredicates();
+    predicate.equalTo('profile_id', profileID);
+    const deleted = await dataShareHelper.delete(this.uri, predicate);
+    if (deleted < 0) { throw new Error('Actual APN delete failed: ' + deleted); }
+    LogUtils.i(TAG, 'Actual APN delete returned:' + deleted);
   }
 
   public async dataReset(simId: number) {
@@ -157,31 +143,26 @@ export class DataStorage {
     return `${uri}${separator}${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
   }
 
-  public async dataUpdate(profileID: number, value: DetailsCommon) {
-    let da = new dataSharePredicates.DataSharePredicates();
-    da.equalTo('profile_id', Number(profileID));
-    let va: ValuesBucket = await this.initSaveData(value, true);
-    va = this.checkApnData(va);
-    LogUtils.i(TAG, '[dataUpdate]');
-    await dataShareHelper.update(this.uri, da, va).then((data) => {
-      LogUtils.i(TAG, 'update succeed, data : ' + data);
-    }).catch((err: BusinessError) => {
-      LogUtils.e(TAG, `insert error: code: ${err.code}, message: ${err.message} `);
-    })
+  public async dataUpdate(profileID: number, value: DetailsCommon): Promise<void> {
+    const predicate = new dataSharePredicates.DataSharePredicates();
+    predicate.equalTo('profile_id', profileID);
+    const values = this.checkApnData(await this.initSaveData(value, true));
+    const changed = await dataShareHelper.update(this.uri, predicate, values);
+    if (changed < 0) { throw new Error('Actual APN update failed: ' + changed); }
+    LogUtils.i(TAG, 'Actual APN update returned:' + changed);
   }
 
-  public async preferApnDataUpdate(simId: number, profileId: number) {
-    LogUtils.i(TAG, 'preferApnDataUpdate');
-    let preferApnData: ValuesBucket = {
-      'sim_id': Number(simId),
-      'profile_id': Number(profileId)
+  public async preferApnDataUpdate(simId: number, profileId: number): Promise<void> {
+    if (dataShareHelper === undefined) {
+      throw new Error('Actual APN DataShare helper is unavailable');
     }
-    let preferPredicates = new dataSharePredicates.DataSharePredicates();
-    await dataShareHelper.update(this.preferApnUri, preferPredicates, preferApnData).then((data) => {
-      LogUtils.i(TAG, 'preferApnDataUpdate succeed, data : ' + data);
-    }).catch((err: BusinessError) => {
-      LogUtils.e(TAG, `preferApnDataUpdate error: code: ${err.code}, message: ${err.message} `);
-    })
+    const values: ValuesBucket = { sim_id: simId, profile_id: profileId };
+    const predicates = new dataSharePredicates.DataSharePredicates();
+    const changed = await dataShareHelper.update(this.preferApnUri, predicates, values);
+    if (changed < 0) {
+      throw new Error('Actual preferred APN update failed: ' + changed);
+    }
+    LogUtils.i(TAG, 'preferApnDataUpdate returned:' + changed);
   }
 
   public preferApnDataQuery(simId: number): Promise<number> {

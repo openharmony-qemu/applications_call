@@ -134,7 +134,8 @@
         "name": "UIExtensionProvider",
         "srcEntry": "./ets/entryability/NetAccessPolicyUIExtension.ets",
         "description": "UIExtensionProvider",
-        "type": "sysDialog/common",
+        "type": "sys/commonUI",
+        "exported": true,
         "icon": "$media:appIcon"
       },
       {

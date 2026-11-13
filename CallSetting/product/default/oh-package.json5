@@ -6,8 +6,8 @@
   "author": "",
   "license": "",
   "dependencies": {
-    "@ohos/common": "../../common",
-    "@ohos/cust": "../../feature/cust",
+    "@ohos/common": "file:../../common",
+    "@ohos/cust": "file:../../feature/cust",
 //    "@hms-security/agoh-base-sdk": "1.4.6-300",
 //    "@hms-paf/ui-widget-base": "14.16.9-314",
 //    "@hms-paf/ui-widget-emptypage": "14.16.9-314",
@@ -15,7 +15,7 @@
 //    "@hms-paf/ui-widget-about-v2": "14.17.7-304",
 //    "@hms-paf/ui-widget-permission-v2": "14.17.7-304",
 //    "@hms-paf/ui-widget-webview-v2": "14.17.7-304",
-    "@ohos/lottie": "2.0.23"
+    "@ohos/lottie": "file:libs/lottie-2.0.23.har"
   },
   "overrides": {
 //    "@hms-security/agoh-base-sdk": "1.4.6-300",

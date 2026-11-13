@@ -1,0 +1,21 @@
+# Copyright (c) 2026 Harmony Contrib
+# SPDX-License-Identifier: Apache-2.0
+import("//build/ohos.gni")
+
+# The complete official default/common/cust application is compiled. Its
+# existing real APN list/details/data-share implementation serves the modal.
+ohos_app("callsetting_hap") {
+  deps = []
+  certificate_profile = "signature/callsetting.p7b"
+  hap_name = "CallSetting"
+  part_name = "prebuilt_hap"
+  subsystem_name = "applications"
+  module_install_dir = "app/com.ohos.callsetting"
+  sdk_home = "//prebuilts/ohos-sdk/linux"
+  sdk_type_name = [ "sdk.dir" ]
+  assemble_type = "assembleHap"
+  build_level = "module"
+  js_build_mode = "release"
+  build_modules = [ "default" ]
+  hap_list = [ "CallSetting-default-default-unsigned:CallSetting" ]
+}

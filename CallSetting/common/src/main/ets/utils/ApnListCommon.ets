@@ -141,17 +141,22 @@ export class ApnListCommon {
     if (this.cardType === -1) {
       return;
     }
-    if (value === this.selectCommon) {
-      return;
+    const account = await sim.getSimAccountInfo(this.cardType);
+    if (!account || !Number.isInteger(account.simId) || account.simId < 0) {
+      throw new Error('Actual SIM account is unavailable');
     }
-    this.selectCommon = value;
-    AppStorage.setOrCreate('selectId', this.selectCommon);
-    let icc = await sim.getSimIccId(this.cardType);
-    await this.sharedPreferences.saveToPreferences('selectAPN_common_' + icc, this.selectCommon);
-    // select a APN means user wants to set as prefer.
-    this.setPreferApn();
-    // 选择apn打点
-    ReportUtil.getInstance().reportSelectApn(this.selectCommon, this.cardType);
+    await this.dataStorage.initData();
+    await this.dataStorage.preferApnDataUpdate(account.simId, value);
+    const committed = await this.dataStorage.preferApnDataQuery(account.simId);
+    if (committed !== value) {
+      throw new Error('Preferred APN was not confirmed by the real service');
+    }
+    const icc = await sim.getSimIccId(this.cardType);
+    await this.sharedPreferences.saveToPreferences('selectAPN_common_' + icc, value);
+    this.selectCommon = committed;
+    AppStorage.setOrCreate('selectId', committed);
+    LogUtils.i(TAG, 'Preferred APN committed profileId:' + committed + ', simId:' + account.simId);
+    ReportUtil.getInstance().reportSelectApn(committed, this.cardType);
   }
 
   public setPreferApn() {

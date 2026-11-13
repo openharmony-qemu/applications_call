@@ -111,6 +111,7 @@ export struct ApnDetailDialogContent {
           text: this.inputText as string,
           controller: this.textController
         })
+          .id('system-apn-field-input')
           .backgroundColor(Color.Transparent)
           .type(InputType.Number)
           .width('100%')
@@ -157,6 +158,7 @@ export struct ApnDetailDialogContent {
           text: this.inputText as string,
           controller: this.textController
         })
+          .id('system-apn-field-input')
           .backgroundColor(Color.Transparent)
           .borderRadius($r('sys.float.corner_radius_none'))
           .width('100%')

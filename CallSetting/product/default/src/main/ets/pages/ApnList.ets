@@ -47,6 +47,10 @@ export function apnLoader(): void {
 
 @Component
 export default struct apn {
+  closeDialog?: () => void;
+  private leaveApn(): void {
+    if (this.closeDialog !== undefined) { this.closeDialog(); } else { this.pathInfos.pop(); }
+  }
   @State @Watch('watchCommon') common: ApnListCommon = new ApnListCommon();
   @StorageLink('hasSimCard1') @Watch('watchHasSim') hasSimCard1: boolean = false;
   @StorageLink('hasSimCard2') @Watch('watchHasSim') hasSimCard2: boolean = false;
@@ -89,6 +93,10 @@ export default struct apn {
   }
 
   pushApnDetails(params: ParamsType) {
+    if (this.closeDialog !== undefined) {
+      this.pathInfos.pushPathByName('apnDetails', params);
+      return;
+    }
     DynamicLoader.getInstance().callFunction('apnDetails').then(() => {
       this.pathInfos.pushPathByName('apnDetails', params);
     });
@@ -102,7 +110,7 @@ export default struct apn {
       await this.common.getAllApnList();
       await this.common.getSelectApn();
     } else {
-      this.pathInfos.pop();
+      this.leaveApn();
       LogUtils.e(TAG, 'aboutToAppear getParams null');
     }
     LogUtils.i(TAG, '[cardType]' + JSON.stringify(this.common.cardType));
@@ -114,11 +122,11 @@ export default struct apn {
     // Temporarily return to the previous page, which is more friendly behavior.
     if (this.common.cardType === 0) {
       if (!this.hasSimCard1) {
-        this.pathInfos.pop();
+        this.leaveApn();
       }
     } else if (this.common.cardType === 1) {
       if (!this.hasSimCard2) {
-        this.pathInfos.pop();
+        this.leaveApn();
       }
     }
   }
@@ -137,7 +145,7 @@ export default struct apn {
       await this.common.getAllApnList();
       await this.common.getSelectApn();
     } else {
-      this.pathInfos.pop();
+      this.leaveApn();
       LogUtils.e(TAG, 'aboutToAppear getParams null');
     }
     LogUtils.i(TAG, '[cardType]' + JSON.stringify(this.common.cardType));
@@ -236,11 +244,12 @@ export default struct apn {
           isSaveIconRequired: false,
           contentMargin:{top:LengthMetrics.px(100)},
           onCancel:()=>{
-            this.pathInfos.pop()
+            this.leaveApn()
           }
         })
           .layoutWeight(1)
         Image($r("app.media.ic_public_more"))
+          .id('system-apn-menu')
           .height(36)
           .width(36)
           .margin({top:LengthMetrics.px(100)})
@@ -260,6 +269,11 @@ export default struct apn {
         }
       }.layoutWeight(1)
     }
+    .onBackPressed(() => {
+      if (this.closeDialog === undefined) { return false; }
+      this.closeDialog();
+      return true;
+    })
     .hideTitleBar(true)
     .height('100%')
     // .titleBar({
@@ -356,6 +370,7 @@ export default struct apn {
       left: getPaddingByDevice(),
       right: getPaddingByDevice()
     })
+    .id('system-apn-list')
     .cachedCount(20)
     .size({ height: 'calc(100% - 56vp)' })
     .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
@@ -528,6 +543,7 @@ export default struct apn {
   MyMenu(){
     Menu(){
       MenuItem({content: $r('app.string.APN_Creating_an_APN')})
+        .id('system-apn-create')
         .onClick(()=> {
             let params: ParamsType = {
               cardType: this.common.cardType,
@@ -658,6 +674,7 @@ struct apnButton {
               .onClick(async () => {
                 await this.selectButton();
               })
+              .id('system-apn-select-' + this.buttonData.id)
               .padding({ left: $r('sys.float.padding_level4'), right: $r('sys.float.padding_level4') })
 
               Button() {
@@ -679,6 +696,7 @@ struct apnButton {
               .constraintSize({ minHeight: 48 })
               .width(24)
               .margin({ left: $r('sys.float.padding_level2'), right: $r('sys.float.padding_level4') })
+              .id('system-apn-edit-' + this.buttonData.id)
               .accessibilityText($r('app.string.details'))
               .backgroundColor($r('sys.color.comp_background_primary'))
             }

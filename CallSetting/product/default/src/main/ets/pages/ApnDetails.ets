@@ -303,7 +303,7 @@ export default struct CallAPN {
       primaryButton: {
         value: $r('app.string.Apn_OK'),
         action: () => {
-          this.dialogController.close();
+          this.dialogMsgController.close();
         }
       }
     }),
@@ -345,6 +345,7 @@ export default struct CallAPN {
               await this.deleteData();
               this.pathInfos.pop()
             })
+            .id('system-apn-delete')
             .visibility(this.common.profileID !== -1 && this.common.isDefault === 1 ?
             Visibility.Visible : Visibility.None)
             .width('100%')
@@ -397,6 +398,7 @@ export default struct CallAPN {
     //     }
     //   }
     // })
+    .id('system-apn-details')
     .hideTitleBar(true)
     //.title(this.myTitleBar)
     .padding({ top: 40  })
@@ -576,7 +578,8 @@ export default struct CallAPN {
           return;
         }
         this.onDialogButton(item);
-      });
+      })
+      .id('system-apn-field-' + item.key);
     }
   }
 
